@@ -1,8 +1,11 @@
 {
-  "name": "uniswap-proposal",
+  "name": "uni-eth-pool-proposal",
   "version": "1.0.0",
-  "description": "",
-  "main": "submitProposal.js",
+  "description": "Default project for Truffle: example contracts, migrations and tests",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
