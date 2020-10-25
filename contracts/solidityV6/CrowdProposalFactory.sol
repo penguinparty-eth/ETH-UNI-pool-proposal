@@ -1,9 +1,13 @@
+/**
+ *Submitted for verification at Etherscan.io on 2020-10-17
+*/
+
 // SPDX-License-Identifier: GPL-3.0
 // forked from Compound's autonomous proposal Factory @0x524B54a6A7409A2Ac5b263Fb2A41DAC9d155ae71
 // refactored by the penguin party @penguinparty.eth
 
 pragma solidity ^0.6.10;
-pragma experimental ABIEncodeuni
+pragma experimental ABIEncoderV2;
 
 interface IUni {
     function delegate(address delegatee) external;
@@ -23,7 +27,7 @@ contract CrowdProposal {
 
     /// @notice Governance proposal data
     address[] public targets;
-    uint[] public values;]
+    uint[] public values;
     string[] public signatures;
     bytes[] public calldatas;
     string public description;
@@ -31,7 +35,7 @@ contract CrowdProposal {
     /// @notice UNI token contract address
     address public immutable uni;
     /// @notice Uniswap protocol `GovernorAlpha` contract address
-    address public immutable factory;
+    address public immutable governor;
 
     /// @notice Governance proposal id
     uint public govProposalId;
