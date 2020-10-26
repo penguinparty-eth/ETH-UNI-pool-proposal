@@ -1,7 +1,7 @@
 const Web3 = require('web3')
 const net = require('net')
 const GM = require('godmode-for-test')
-
+const {assert} = require('chai')
 
 const uniAddress = "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"
 const ethUniPoolAddress = "0xd3d2E2692501A5c9Ca623199D38826e513033a17"
@@ -15,7 +15,6 @@ const timelock = artifacts.require("TimelockGodMode")
 const crowdProposalFactory = artifacts.require("CrowdProposalFactory")
 const crowdProposal = artifacts.require("CrowdProposal")
 const governorAlpha = artifacts.require("GovernorAlpha")
-const governorAlphaGodMode = artifacts.require("GovernorAlphaGodMode")
 const stakingRewardsFactory = artifacts.require("StakingRewardsFactory")
 const stakingRewards = artifacts.require("StakingRewards")
 const uniswapV2Pair = artifacts.require("UniswapV2Pair")
@@ -43,8 +42,31 @@ advanceBlock = () => {
 
 
 
-contract("Test network setup", accounts => {
+contract("Proposal Test", accounts => {
   describe("Setup the test environment", async () => {
+    const ethUniPoolContract = await uniswapV2Pair.at(ethUniPoolAddress)
+    const stakingRewardsFactoryContract = await stakingRewardsFactory.at(stakingRewardsFactoryAddress)
+    const governorAlphaContract = await governorAlpha.at(governorAlphaAddress)
+    const uniContract = await uni.at(uniAddress)
+    const crowdProposalFactoryContract = new web3.eth.Contract(crowdProposalFactory.abi, crowdProposalFactoryAddress)
+    const timelockContract = await timelock.at(timelockAddress)
+    const proposer = accounts[0]//the account that will propose the autonomous proposal
+    const supporter = accounts[1]// the account that will support the autonomous proposal
+    const voter = accounts[2]//the account that will vote yes once the autonomous proposal is submitted
+    const staker1 = accounts[3]
+    const proposerBalance = "10000000000000000000000"
+    const supporterBalance = "10000000000000000000000000"
+    const voterBalance = "40000000000000000000000000"
+    const w3UniContract = new web3.eth.Contract(uniContract.abi, uniAddress)
+    const w3StakingRewardsFactoryContract = new web3.eth.Contract(stakingRewardsFactory.abi, stakingRewardsFactoryAddress)
+    const liqMiningAllocation = "5000000000000000000000000"
+    const transferCallData = w3UniContract.methods.transfer(stakingRewardsFactoryAddress, liqMiningAllocation).encodeABI()
+    const deployCallData = w3StakingRewardsFactoryContract.methods.deploy(ethUniPoolAddress, liqMiningAllocation, rewardsDuration).encodeABI()
+    const notifyRewardAmountCallData = w3StakingRewardsFactoryContract.methods.notifyRewardAmount(ethUniPoolAddress).encodeABI()
+
+    const day = 24 * 60 * 60
+    const rewardsDuration = 60 * day
+    
     before(async () => {
       await godmode.open();
       
@@ -54,24 +76,7 @@ contract("Test network setup", accounts => {
       await godmode.close();
     })
 
-    it("Should do everything", async (done) => {
-      const ethUniPoolContract = await uniswapV2Pair.at(ethUniPoolAddress)
-      const stakingRewardsFactoryContract = await stakingRewardsFactory.at(stakingRewardsFactoryAddress)
-      const governorAlphaContract = await governorAlpha.at(governorAlphaAddress)
-      const uniContract = await uni.at(uniAddress)
-      const crowdProposalFactoryContract = new web3.eth.Contract(crowdProposalFactory.abi, crowdProposalFactoryAddress)
-      const timelockContract = await timelock.at(timelockAddress)
-
-
-      const proposer = accounts[0]//the account that will propose the autonomous proposal
-      const supporter = accounts[1]// the account that will support the autonomous proposal
-      const voter = accounts[2]//the account that will vote yes once the autonomous proposal is submitted
-      const proposerBalance = "10000000000000000000000"
-      const supporterBalance = "10000000000000000000000000"
-      const voterBalance = "40000000000000000000000000"
-      const timelockBalance = await uniContract.balanceOf(timelockAddress)
-      console.log(`###################TimlockBalance: ${timelockBalance}`)
-
+    it("Mint UNI for test accounts", async (done) => {
 
       await godmode.executeAs(//mint UNI for test accounts
         uniContract,
@@ -94,14 +99,16 @@ contract("Test network setup", accounts => {
         {from: voter}
       )
 
-      // await godmode.executeAs(
-      //   uniContract,
-      //   uniMintable,
-      //   "mint", timelock.address, timelockBalance,
-      //   {from: proposer}
-      // )
+      const proposerBalance_ = await uniContract.balanceOf(proposer)
+      const supporterBalance_ = await uniContract.balanceOf(supporter)
+      const voterBalance_ = await uniContract.balanceOf(voter)
+      assert(proposerBalance == proposerBalance_, "failed to mint proposer balance")
+      assert(supporterBalance == supporterBalance_, "failed to mint supporter balance")
+      assert(voterBalance == voterBalance_, "failed to mint voter balance")
+      done()
+    })
 
-
+    it("Mint UNI-ETH LP tokens for testing", async done => {
       await godmode.executeAs(//give voter liq tokens for testing
         ethUniPoolContract,
         uniswapV2PairGodMode,
@@ -109,47 +116,36 @@ contract("Test network setup", accounts => {
         {from: proposer}
       )
 
+      const 
+    })
+
+      
+
       await uniContract.approve(crowdProposalFactoryAddress, "10000000000000000000000", {from: proposer})
 
       await uniContract.delegate(voter, {from: voter})
 
-      //
-      const day = 24 * 60 * 60
-      const rewardsDuration = 60 * day
 
-      //unistakeAmount:                                                                 1000000000000000000000
-      //allowance of crowdProposalFactory (0xfb13251C994701b27CCFd4CCCcf5847aA29a3702): 10000000000000000000000
-      //balance of proposer (0x4A9f985de3245C4DF261369FFe21aB3b0e275136):               10000000000000000000000
-      const w3UniContract = new web3.eth.Contract(uniContract.abi, uniAddress)
-      const w3StakingRewardsFactoryContract = new web3.eth.Contract(stakingRewardsFactory.abi, stakingRewardsFactoryAddress)
-      const liqMiningAllocation = "5000000000000000000000000"
-
-      const transferCallData = w3UniContract.methods.transfer(stakingRewardsFactoryAddress, liqMiningAllocation).encodeABI()
-      const deployCallData = w3StakingRewardsFactoryContract.methods.deploy(ethUniPoolAddress, liqMiningAllocation, rewardsDuration).encodeABI()
-      const notifyRewardAmountCallData = w3StakingRewardsFactoryContract.methods.notifyRewardAmount(ethUniPoolAddress).encodeABI()
-
-
-
-
-      crowdProposalFactoryContract.methods.createCrowdProposal(
+      const callData = crowdProposalFactoryContract.methods.createCrowdProposal(
         [uniAddress,stakingRewardsFactoryAddress,stakingRewardsFactoryAddress],//targets
         [0,0,0],//values
         ["","",""],//signatures
         //[[stakingRewardsFactoryAddress, liqMiningAllocation], [ethUniPoolAddress, liqMiningAllocation, rewardsDuration],[ethUniPoolAddress]],
         [transferCallData, deployCallData, notifyRewardAmountCallData],//calldatas
-        "ETH-UNI liquidity pool description goes here!"//description
-      ).send({from: proposer, gas: 5000000})
-
+        "# Fund a 60 day UNI-ETH liquidity mining pool with 5M UNI\n This proposal creates a UNI-ETH liquidity mining pool with the same configuration as the current pools (5 million UNI over 60 days).\n We believe that this proposal will return value to UNI holders by creating incentives to hold UNI and by increasing UNI liquidity. This proposal has the added benefit of drawing UNI from centralised exchanges that may have the incentive to vote against the best interests of Uniswap. \n\n signed penguinparty.eth"//description
+      ).encodeABI()
       
-      // crowdProposalFactoryContract.methods.createCrowdProposal(
-      //   [uniAddress],//targets
-      //   [0],//values
-      //   [""],//signatures
-      //   [w3UniContract.methods.transfer(stakingRewardsFactoryAddress, liqMiningAllocation).encodeABI()],//calldatas
-      //   "ETH-UNI liquidity pool description goes here!"//description
-      // ).send({from: proposer, gas: 5000000})
+      // tx = {
+      //   nonce: 5,
+      //   chainId: 1,
+      //   to: crowdProposalFactoryAddress,
+      //   data: callData,
+      //   gas: 500000,
+      //   gasPrice: 4000000000,
+      //   value: 0
+      // }
+      //console.log(tx)
       
-
       
       crowdProposalFactoryContract.once("CrowdProposalCreated", async (error, event) => {
 
