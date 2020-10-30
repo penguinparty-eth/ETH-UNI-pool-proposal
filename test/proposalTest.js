@@ -113,10 +113,48 @@ contract("Proposal Test", accounts => {
         ethUniPoolContract,
         uniswapV2PairGodMode,
         "mint", voter,
-        {from: proposer}
+        {from: staker1}
       )
 
-      const 
+      await godmode.executeAs(//give voter liq tokens for testing
+        ethUniPoolContract,
+        uniswapV2PairGodMode,
+        "mint", voter,
+        {from: staker2}
+      )
+
+      await godmode.executeAs(//give voter liq tokens for testing
+        ethUniPoolContract,
+        uniswapV2PairGodMode,
+        "mint", voter,
+        {from: staker3}
+      )
+
+      const staker1Balance = await ethUniPoolContract.balanceOf(staker1)
+      assert(staker1Balance > 0, "failed to mint liquidity tokens for staker1")
+      const staker2Balance = await ethUniPoolContract.balanceOf(staker2)
+      assert(staker2Balance > 0, "failed to mint liquidity tokens for staker2")
+      const staker3Balance = await ethUniPoolContract.balanceOf(staker3)
+      assert(staker3Balance > 0, "failed to mint liquidity tokens for staker3")
+
+      done()
+    })
+
+    it("Approve various contracts to spend tokens", async done => {
+      await uniContract.approve(crowdProposalFactoryAddress, "10000000000000000000000", {from: proposer})
+
+      await uniContract.delegate(voter, {from: voter})
+
+
+      const callData = crowdProposalFactoryContract.methods.createCrowdProposal(
+        [uniAddress,stakingRewardsFactoryAddress,stakingRewardsFactoryAddress],//targets
+        [0,0,0],//values
+        ["","",""],//signatures
+        //[[stakingRewardsFactoryAddress, liqMiningAllocation], [ethUniPoolAddress, liqMiningAllocation, rewardsDuration],[ethUniPoolAddress]],
+        [transferCallData, deployCallData, notifyRewardAmountCallData],//calldatas
+        "# Fund a 60 day UNI-ETH liquidity mining pool with 5M UNI\n This proposal creates a UNI-ETH liquidity mining pool with the same configuration as the current pools (5 million UNI over 60 days).\n We believe that this proposal will return value to UNI holders by creating incentives to hold UNI and by increasing UNI liquidity. This proposal has the added benefit of drawing UNI from centralised exchanges that may have the incentive to vote against the best interests of Uniswap. \n Run a simulation of this proposal [here](https://github.com/businessfriendlyusername/ETH-UNI-pool-proposal)\n\n signed penguinparty.eth"//description
+      ).encodeABI()
+      console.log(callData)
     })
 
       
@@ -132,7 +170,7 @@ contract("Proposal Test", accounts => {
         ["","",""],//signatures
         //[[stakingRewardsFactoryAddress, liqMiningAllocation], [ethUniPoolAddress, liqMiningAllocation, rewardsDuration],[ethUniPoolAddress]],
         [transferCallData, deployCallData, notifyRewardAmountCallData],//calldatas
-        "# Fund a 60 day UNI-ETH liquidity mining pool with 5M UNI\n This proposal creates a UNI-ETH liquidity mining pool with the same configuration as the current pools (5 million UNI over 60 days).\n We believe that this proposal will return value to UNI holders by creating incentives to hold UNI and by increasing UNI liquidity. This proposal has the added benefit of drawing UNI from centralised exchanges that may have the incentive to vote against the best interests of Uniswap. \n\n signed penguinparty.eth"//description
+        "# Fund a 60 day UNI-ETH liquidity mining pool with 5M UNI\n This proposal creates a UNI-ETH liquidity mining pool with the same configuration as the current pools (5 million UNI over 60 days).\n We believe that this proposal will return value to UNI holders by creating incentives to hold UNI and by increasing UNI liquidity. This proposal has the added benefit of drawing UNI from centralised exchanges that may have the incentive to vote against the best interests of Uniswap. \n Run a simulation of this proposal [here](https://github.com/businessfriendlyusername/ETH-UNI-pool-proposal)\n\n signed penguinparty.eth"//description
       ).encodeABI()
       
       // tx = {
